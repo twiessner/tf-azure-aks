@@ -21,13 +21,26 @@ resource "azurerm_kubernetes_cluster" "main" {
   name                = "${var.name}-aks"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
-  dns_prefix          = "${var.name}-aks"
+
+  dns_prefix              = "${var.name}-aks"
+  private_cluster_enabled = false
 
   default_node_pool {
-    name           = "default"
-    node_count     = 1
-    vm_size        = "Standard_D2s_v4"
+    name     = "system"
+    vm_size  = "Standard_A2m_v2"
+    zones    = ["1"]
+    max_pods = 250
+
+    os_sku         = "Ubuntu"
     vnet_subnet_id = azurerm_subnet.main.id
+
+    enable_auto_scaling = true
+    node_count          = 1
+    min_count           = 1
+    max_count           = 1
+
+    os_disk_size_gb = 100
+    only_critical_addons_enabled = false
   }
 
   identity {
@@ -35,7 +48,8 @@ resource "azurerm_kubernetes_cluster" "main" {
   }
 
   network_profile {
-    network_plugin = "kubenet"
+    network_plugin    = "kubenet"
+    load_balancer_sku = "standard"
 
     pod_cidr       = "10.1.0.0/16"
     service_cidr   = "10.2.0.0/16"
@@ -45,14 +59,4 @@ resource "azurerm_kubernetes_cluster" "main" {
   tags = {
     Environment = "PoC"
   }
-}
-
-output "client_certificate" {
-  value     = azurerm_kubernetes_cluster.main.kube_config.0.client_certificate
-  sensitive = true
-}
-
-output "kube_config" {
-  value     = azurerm_kubernetes_cluster.main.kube_config_raw
-  sensitive = true
 }
